@@ -2,8 +2,9 @@
   "name": "@frema/functions",
   "version": "0.0.1",
   "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
   "scripts": {
-    "typecheck": "tsc -b",
     "build": "tsc -b",
     "dev": "func start --javascript",
     "test": "vitest"
