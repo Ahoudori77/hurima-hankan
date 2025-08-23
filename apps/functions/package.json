@@ -3,17 +3,18 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
+    "typecheck": "tsc -b",
     "build": "tsc -b",
     "dev": "func start --javascript",
     "test": "vitest"
   },
   "dependencies": {
-    "@azure/functions": "^4.4.0",
-    "@azure/cosmos": "^4.2.0",
-    "@azure/storage-blob": "^12.18.0"
+    "@azure/cosmos": "^4.5.0",
+    "@azure/functions": "^4.7.3",
+    "@azure/storage-blob": "^12.28.0"
   },
   "devDependencies": {
-    "typescript": "^5.5.4",
-    "vitest": "^2.0.5"
+    "typescript": "^5.9.2",
+    "vitest": "^2.1.9"
   }
 }

@@ -7,16 +7,20 @@
     "dev": "concurrently -n liff,admin,func -c cyan,magenta,green \"pnpm --filter @frema/liff dev\" \"pnpm --filter @frema/admin dev\" \"pnpm --filter @frema/functions dev\"",
     "lint": "pnpm -r eslint .",
     "typecheck": "pnpm -r tsc -b",
-    "test": "pnpm -r test"
+    "test": "pnpm -r test",
+    "prepare": "husky install"
   },
   "devDependencies": {
-    "concurrently": "^9.0.1",
-    "typescript": "^5.5.4",
-    "eslint": "^9.9.0",
-    "eslint-config-prettier": "^9.1.0",
-    "eslint-plugin-import": "^2.29.1",
-    "prettier": "^3.3.3",
-    "lint-staged": "^15.2.9",
-    "husky": "^9.1.4"
+    "@types/node": "^20",
+    "@typescript-eslint/eslint-plugin": "^8.40.0",
+    "@typescript-eslint/parser": "^8.40.0",
+    "concurrently": "^9.2.0",
+    "eslint": "^9.34.0",
+    "eslint-config-prettier": "^9.1.2",
+    "eslint-plugin-import": "^2.32.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.2",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.2"
   }
 }
