@@ -1,0 +1,2 @@
+export type OrderStatus = 'received'|'qr_assigned'|'qr_sent'|'proof_submitted'|'shipped'|'cancelled'|'returned';
+export interface ProofCommitInput { order_id: string; blobs: { trade: string; post: string }; post_number_text?: string }

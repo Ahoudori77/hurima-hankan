@@ -1,0 +1,1 @@
+- SWA(liff/admin), Functions, Cosmos(serverless), Storage, Key Vault を作成するBicepをここに配置します。
