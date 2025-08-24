@@ -1,18 +1,24 @@
-import { useEffect, useState } from "react";
-import { api } from "../api/client";
-import type { Shipment, ListResponse } from "../types";
+// apps/admin/src/pages/ShipmentsList.tsx
+import { useEffect, useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
+import { listShipments, Shipment } from "../lib/api";
 
-export default function ShipmentsPage() {
-  const [data, setData] = useState<Shipment[] | null>(null);
+export default function ShipmentsList() {
+  const [items, setItems] = useState<Shipment[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const loc = useLocation();
+  const needsRefresh = useMemo(() => {
+    const s = new URLSearchParams(loc.search);
+    return s.get("refresh") === "1";
+  }, [loc.search]);
 
-  const load = async () => {
-    setLoading(true);
+  const fetchList = async () => {
     setErr(null);
+    setLoading(true);
     try {
-      const res = await api.getShipments() as ListResponse<Shipment>;
-      setData(res.items ?? []);
+      const res = await listShipments();
+      setItems(res.items);
     } catch (e: any) {
       setErr(e.message ?? String(e));
     } finally {
@@ -20,36 +26,59 @@ export default function ShipmentsPage() {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    fetchList();
+  }, []);
+
+  // /ship から遷移して来たときは追いリロード
+  useEffect(() => {
+    if (needsRefresh) fetchList();
+  }, [needsRefresh]);
 
   return (
-    <section style={{ padding: 16 }}>
+    <div>
       <h2>出荷一覧</h2>
-      <button onClick={load} disabled={loading} style={{ marginBottom: 8 }}>
-        {loading ? "読み込み中..." : "再読み込み"}
+      <button onClick={fetchList} disabled={loading}>
+        {loading ? "読込中..." : "再読み込み"}
       </button>
-      {err && <div style={{ color: "crimson" }}>Error: {err}</div>}
-      {!data?.length && !loading && <div>データなし</div>}
-      {!!data?.length && (
-        <table border={1} cellPadding={6} style={{ width: "100%", fontSize: 14 }}>
+      {err && <p style={{ color: "crimson" }}>Error: {err}</p>}
+      {!items?.length && !loading && <p>データなし</p>}
+      {!!items?.length && (
+        <table border={1} cellPadding={6} style={{ marginTop: 8, width: "100%" }}>
           <thead>
             <tr>
-              <th>注文ID</th><th>配送会社</th><th>追跡番号</th><th>通知</th><th>登録日時</th>
+              <th>注文ID</th>
+              <th>配送会社</th>
+              <th>追跡番号</th>
+              <th>通知</th>
+              <th>登録日時</th>
             </tr>
           </thead>
           <tbody>
-            {data.map(s => (
-              <tr key={s.id}>
-                <td>{s.order_id}</td>
-                <td>{s.carrier}</td>
-                <td>{s.tracking_no}</td>
-                <td>{s.notified ? "はい" : "いいえ"}</td>
-                <td>{new Date(s.created_at).toLocaleString()}</td>
+            {items.map((x) => (
+              <tr key={x.id}>
+                <td>{x.order_id}</td>
+                <td>{x.carrier}</td>
+                <td>{x.tracking_no}</td>
+                <td>{x.notified ? "はい" : "いいえ"}</td>
+                <td>{formatDate(x.created_at)}</td>
               </tr>
             ))}
           </tbody>
         </table>
       )}
-    </section>
+    </div>
   );
+}
+
+function formatDate(iso: string) {
+  try {
+    const d = new Date(iso);
+    return new Intl.DateTimeFormat("ja-JP", {
+      dateStyle: "medium",
+      timeStyle: "medium",
+    }).format(d);
+  } catch {
+    return iso;
+  }
 }
