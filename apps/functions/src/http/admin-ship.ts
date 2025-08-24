@@ -1,33 +1,50 @@
-import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
+import { app, HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
+import { shipmentsContainer, ShipmentDoc } from "../integrations/cosmos.js";
 
-app.http('admin-ship', {
-  methods: ['POST'],
-  authLevel: 'function',
-  route: 'ops/ship',
-  handler: async (req: HttpRequest, ctx: InvocationContext): Promise<HttpResponseInit> => {
-    const body = (await req.json().catch(() => ({}))) as {
-      order_id: string;
-      carrier?: string;
-      tracking_no?: string;
-      notify?: boolean;
-    };
+type ReqBody = {
+  order_id: string;
+  carrier: string;
+  tracking_no: string;
+  notify?: boolean;
+};
 
-    ctx.log('admin/ship: request', body);
-    if (!body.order_id) {
-      return { status: 400, jsonBody: { ok: false, error: 'order_id required' } };
-    }
+export async function adminShip(req: HttpRequest, ctx: InvocationContext): Promise<HttpResponseInit> {
+  const body = (await req.json()) as Partial<ReqBody> ?? {};
+  const { order_id, carrier, tracking_no, notify = true } = body;
 
-    // ※ここで本来は: 認可チェック → 状態ガード → DB更新 → （静音考慮の）LINE通知
+  if (!order_id || !carrier || !tracking_no) {
+    return { status: 400, jsonBody: { ok: false, message: "order_id, carrier, tracking_no は必須です" } };
+  }
 
-    return {
-      status: 200,
-      jsonBody: {
-        ok: true,
-        order_id: body.order_id,
-        status: 'shipped',
-        notified: !!body.notify,
-        message: '出荷登録しました（ダミー応答）',
-      },
-    };
-  },
+  const id = `SHP-${Date.now()}`;
+  const doc: ShipmentDoc = {
+    id,
+    order_id,
+    carrier,
+    tracking_no,
+    notified: !!notify,
+    created_at: new Date().toISOString(),
+  };
+
+  // 保存
+  await shipmentsContainer().items.create(doc);
+
+  return {
+    status: 200,
+    jsonBody: {
+      ok: true,
+      shipment_id: id,
+      order_id,
+      status: "shipped",
+      notified: !!notify,
+      message: "出荷登録しました",
+    },
+  };
+}
+
+app.http("admin-ship", {
+  methods: ["POST"],
+  route: "ops/ship",
+  authLevel: "admin",
+  handler: adminShip,
 });

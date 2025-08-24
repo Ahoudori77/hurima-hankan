@@ -1,1 +1,1 @@
-{"root":["./src/index.ts","./src/http/admin-health.ts","./src/http/admin-ship.ts","./src/http/orders-receive.ts","./src/http/proofs-commit.ts","./src/http/proofs-start.ts"],"version":"5.9.2"}
+{"root":["./src/index.ts","./src/http/admin-health.ts","./src/http/admin-orders.ts","./src/http/admin-ship.ts","./src/http/admin-shipments-list.ts","./src/http/order-get.ts","./src/http/orders-receive.ts","./src/http/proofs-commit.ts","./src/http/proofs-start.ts","./src/integrations/cosmos.ts"],"version":"5.9.2"}
