@@ -1,9 +1,9 @@
-import React from 'react';
-import { createRoot } from 'react-dom/client';
-import { OrderDetail } from './pages/OrderDetail';
+import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App";
 
-
-function App(){
-  return <OrderDetail/>;
-}
-createRoot(document.getElementById('root')!).render(<App/>);
+ReactDOM.createRoot(document.getElementById("root")!).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);

@@ -4,13 +4,18 @@
     "id": "Microsoft.Azure.Functions.ExtensionBundle",
     "version": "[4.*, 5.0.0)"
   },
-  "http": {
-    "cors": {
-      "allowedOrigins": [
-        "http://localhost:5173",
-        "http://localhost:5174"
-      ],
-      "supportCredentials": true
+  "extensions": {
+    "http": {
+      "routePrefix": "api",
+      "cors": {
+        "allowedOrigins": [
+          "http://localhost:5174",
+          "http://127.0.0.1:5174"
+        ],
+        "allowedHeaders": [ "*" ],
+        "allowedMethods": [ "GET", "POST", "OPTIONS" ],
+        "supportCredentials": true
+      }
     }
   }
 }
