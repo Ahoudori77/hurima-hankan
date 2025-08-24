@@ -1,30 +1,39 @@
-import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
+// apps/functions/src/http/orders-receive.ts
+import { app, HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
+import { ordersContainer } from "../integrations/cosmos.js";
 
-app.http('orders-receive', {
-  methods: ['POST'],
-  authLevel: 'function',
-  route: 'orders/receive',
+type OrderRequest = {
+  marketplace: "M" | "Y" | "R";
+  itemName: string;
+  price: number;
+  sellerHint?: string;
+};
+
+app.http("orders-receive", {
+  methods: ["POST"],
+  authLevel: "admin",
+  route: "orders/receive",
   handler: async (req: HttpRequest, ctx: InvocationContext): Promise<HttpResponseInit> => {
-    const body = (await req.json().catch(() => ({}))) as {
-      marketplace?: 'M' | 'Y' | 'R';
-      itemName?: string;
-      price?: number;
-      sellerHint?: string;
-    };
-
-    // ダミーで order_id を発番
+    const body = (await req.json()) as OrderRequest;
     const orderId = `ORD-${Date.now()}`;
-    ctx.log('orders/receive: request', body, '->', orderId);
 
-    // ※ここで本来は: id_token検証 → 送料/方法決定 → QR割当 → LINE送信
+    ctx.log(`orders/receive: request ${JSON.stringify(body)} -> ${orderId}`);
+
+    const doc = {
+      id: orderId,            // Cosmos の id
+      order_id: orderId,      // パーティションキー
+      marketplace: body.marketplace,
+      item_name: body.itemName,
+      price: body.price,
+      seller_hint: body.sellerHint ?? null,
+      created_at: new Date().toISOString(),
+      status: "received",
+    };
+    await ordersContainer().items.upsert(doc);
 
     return {
       status: 200,
-      jsonBody: {
-        ok: true,
-        order_id: orderId,
-        message: '受付しました（ダミー応答）',
-      },
+      jsonBody: { ok: true, order_id: orderId, message: "受付&保存しました（Emulator）" },
     };
   },
 });
