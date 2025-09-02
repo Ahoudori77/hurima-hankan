@@ -2,150 +2,84 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-type ShipRequest = {
-  order_id: string;
-  carrier: string;
-  tracking_no: string;
-  notify: boolean;
-};
-
-type ShipResponse = {
-  ok: boolean;
-  order_id: string;
-  shipment_id?: string;
-  status?: string;
-  notified?: boolean;
-  message?: string;
-};
-
 export default function ShipForm() {
-  // 最小プロトの初期値を踏襲（必要に応じて空にしてOK）
   const [orderId, setOrderId] = useState("ORD-TEST");
   const [carrier, setCarrier] = useState("JP Post");
   const [tracking, setTracking] = useState("AB123456789JP");
   const [notify, setNotify] = useState(true);
-
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
+  const [err, setErr] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  const canSubmit =
-    !!orderId.trim() && !!carrier.trim() && !!tracking.trim() && !loading;
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErr(null);
 
-  async function onSubmit() {
-    setError(null);
-    setResult(null);
+    // --- 3) かんたんバリデーション ---
+    if (!orderId.trim() || !carrier.trim() || !tracking.trim()) {
+      setErr("未入力の項目があります。");
+      return;
+    }
+
     setLoading(true);
-
-    const payload: ShipRequest = {
-      order_id: orderId.trim(),
-      carrier: carrier.trim(),
-      tracking_no: tracking.trim(),
-      notify,
-    };
-
     try {
-      const base = import.meta.env.VITE_API_BASE ?? "/api";
-      const res = await fetch(`${base}/ops/ship`, {
+      const res = await fetch("/api/ops/ship", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          order_id: orderId.trim(),
+          carrier: carrier.trim(),
+          tracking_no: tracking.trim(),
+          notify,
+        }),
       });
-
-      const json = (await res.json()) as ShipResponse;
+      const json = await res.json();
 
       if (!res.ok || !json?.ok) {
-        throw new Error(
-          `HTTP ${res.status}${json?.message ? `: ${json.message}` : ""}`
-        );
+        throw new Error(json?.message || `HTTP ${res.status}`);
       }
 
-      setResult(
-        `出荷登録に成功しました。\n注文ID: ${json.order_id}${
-          json.shipment_id ? `\n出荷ID: ${json.shipment_id}` : ""
-        }`
-      );
-
-      // 一覧へ遷移（?refresh=1 で自動再読込）
-      navigate("/shipments?refresh=1");
+      // --- 1) 成功したら一覧へ（自動リフレッシュ） ---
+      navigate("/shipments?refresh=1", { replace: true });
     } catch (e: any) {
-      setError(e?.message ?? String(e));
+      setErr(e.message ?? String(e));
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   return (
-    <main style={{ padding: 16, maxWidth: 560 }}>
+    <section style={{ padding: 16 }}>
       <h2>出荷登録</h2>
-
-      <div style={{ display: "grid", gap: 12, maxWidth: 520 }}>
-        <label>
+      <form onSubmit={onSubmit}>
+        <div>
           注文ID：
-          <input
-            value={orderId}
-            onChange={(e) => setOrderId(e.target.value)}
-            style={{ width: 360, marginLeft: 8 }}
-            placeholder="ORD-XXXXXX"
-          />
-        </label>
-
-        <label>
+          <input value={orderId} onChange={(e) => setOrderId(e.target.value)} style={{ width: 320 }} />
+        </div>
+        <div style={{ marginTop: 8 }}>
           配送会社：
-          <input
-            value={carrier}
-            onChange={(e) => setCarrier(e.target.value)}
-            style={{ width: 240, marginLeft: 8 }}
-            placeholder="JP Post / Yamato など"
-          />
-        </label>
-
-        <label>
+          <input value={carrier} onChange={(e) => setCarrier(e.target.value)} />
+        </div>
+        <div style={{ marginTop: 8 }}>
           追跡番号：
-          <input
-            value={tracking}
-            onChange={(e) => setTracking(e.target.value)}
-            style={{ width: 240, marginLeft: 8 }}
-            placeholder="AB123456789JP"
-          />
-        </label>
-
-        <label style={{ userSelect: "none" }}>
-          <input
-            type="checkbox"
-            checked={notify}
-            onChange={(e) => setNotify(e.target.checked)}
-            style={{ marginRight: 6 }}
-          />
-          出荷登録時に売り子へ通知（ダミー）
-        </label>
-
-        <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-          <button onClick={onSubmit} disabled={!canSubmit}>
-            {loading ? "送信中..." : "出荷登録する"}
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate("/shipments")}
-            disabled={loading}
-          >
-            出荷一覧へ
-          </button>
+          <input value={tracking} onChange={(e) => setTracking(e.target.value)} />
+        </div>
+        <div style={{ marginTop: 8 }}>
+          <label>
+            <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} />
+            出荷登録時に売り子へ通知（ダミー）
+          </label>
         </div>
 
-        {error && (
-          <pre style={{ background: "#fff3f3", color: "#b00020", padding: 8 }}>
-            エラー: {error}
-          </pre>
-        )}
-        {result && (
-          <pre style={{ background: "#f3fff3", color: "#006400", padding: 8 }}>
-            {result}
-          </pre>
-        )}
-      </div>
-    </main>
+        {err && <p style={{ color: "crimson", marginTop: 8 }}>Error: {err}</p>}
+
+        <div style={{ marginTop: 12 }}>
+          {/* 2) ローディング & 二重送信防止 */}
+          <button type="submit" disabled={loading}>
+            {loading ? "送信中..." : "出荷登録"}
+          </button>
+        </div>
+      </form>
+    </section>
   );
 }
