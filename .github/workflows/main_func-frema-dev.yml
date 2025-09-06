@@ -24,7 +24,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 9.7.0
 
       # その後 Node をセットアップ（pnpm キャッシュ有効化）
       - name: Setup Node
