@@ -1,4 +1,3 @@
-# .github/workflows/main_func-frema-dev.yml
 name: Build and deploy Node.js project to Azure Function App - func-frema-dev
 
 on:
