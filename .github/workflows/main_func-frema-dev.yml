@@ -81,7 +81,7 @@ jobs:
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_6DE080F944D046B7BFE6C04F57533B43 }}
 
       - name: Deploy to Azure Functions
-        uses: azure/functions-action@v4
+        uses: azure/functions-action@v1
         with:
           app-name: func-frema-dev
           # host.json があるフォルダを渡す
