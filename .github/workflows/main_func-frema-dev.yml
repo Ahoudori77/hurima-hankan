@@ -1,25 +1,14 @@
+# .github/workflows/main_func-frema-dev.yml
 name: Build and deploy Node.js project to Azure Function App - func-frema-dev
 
 on:
   push:
     branches: [ main ]
-    paths:
-      - "apps/functions/**"
-      - ".github/workflows/main_func-frema-dev.yml"
-      - "pnpm-lock.yaml"
-      - "package.json"
-      - "pnpm-workspace.yaml"
   workflow_dispatch:
 
-# ← Functions プロジェクトのルート（host.json がある場所）
 env:
   AZURE_FUNCTIONAPP_PACKAGE_PATH: apps/functions
   NODE_VERSION: '20'
-
-# 同時実行の競合を防止（同じブランチの古いジョブはキャンセル）
-concurrency:
-  group: "func-frema-dev-${{ github.ref }}"
-  cancel-in-progress: true
 
 jobs:
   build:
@@ -31,33 +20,31 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Node → pnpm の順で設定。cache は pnpm のロックファイルを利用
+      # pnpm を最初に入れる
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      # その後 Node をセットアップ（pnpm キャッシュ有効化）
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
+          # ルートの lockfile を指定（モノレポ想定）
+          cache-dependency-path: pnpm-lock.yaml
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
-          run_install: false
-
-      # ワークスペース全体をインストール（lock が無ければ通常 install）
       - name: Install deps (workspace)
         run: pnpm install --frozen-lockfile || pnpm install
 
-      # Functions パッケージのみビルド
-      # パッケージ名で絞れる場合は： pnpm -F @frema/functions build
       - name: Build functions
+        # 関数パッケージだけビルド。フィルタはお好みで
         run: pnpm -r --filter "./apps/functions" build
 
-      # host.json が期待通り存在するかの軽いチェック（デバッグ用）
       - name: Sanity check host.json
         run: test -f "${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/host.json"
 
-      # フォルダをそのまま配布物としてアップロード（zip 不要）
       - name: Upload artifact (functions folder)
         uses: actions/upload-artifact@v4
         with:
@@ -68,7 +55,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     permissions:
-      id-token: write   # OIDC で Azure にログイン
+      id-token: write
       contents: read
 
     steps:
@@ -86,8 +73,8 @@ jobs:
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_6DE080F944D046B7BFE6C04F57533B43 }}
 
       - name: Deploy to Azure Functions
-        uses: Azure/functions-action@v4
+        uses: azure/functions-action@v4
         with:
           app-name: func-frema-dev
-          package: ./functions_artifact     # host.json が含まれるフォルダ
+          package: ./functions_artifact
           respect-funcignore: true
