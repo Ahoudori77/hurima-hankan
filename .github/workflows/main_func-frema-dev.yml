@@ -1,3 +1,4 @@
+# .github/workflows/main_func-frema-dev.yml
 name: Build and deploy Node.js project to Azure Function App - func-frema-dev
 
 on:
@@ -6,44 +7,52 @@ on:
   workflow_dispatch:
 
 env:
+  # host.json がある Functions プロジェクトのルート
   AZURE_FUNCTIONAPP_PACKAGE_PATH: apps/functions
   NODE_VERSION: '20'
-  CI: 'true'
+  # CI では husky を無効化
   HUSKY: '0'
-  HUSKY_SKIP_INSTALL: '1'
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
+    permissions: { contents: read }
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # 念のため git の hook を無効化（husky の取り残し対策）
+      # 念のため git hooks も無効化（HUSKY=0 と併用）
       - name: Disable git hooks on CI
         run: git config --global core.hooksPath /dev/null
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-
+      # ★ 先に pnpm を入れる（A 案）
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 9
           run_install: false
 
+      # ★ その後 Node を入れて cache に pnpm を指定
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            **/pnpm-lock.yaml
+
       - name: Install deps (workspace)
         run: pnpm install --frozen-lockfile || pnpm install
 
+      # Functions パッケージだけをビルド
       - name: Build functions
         run: pnpm -r --filter "./apps/functions" build
 
+      - name: Sanity check host.json
+        run: test -f "${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/host.json"
+
+      # zip は不要。フォルダをアーティファクトとして渡す
       - name: Upload artifact (functions folder)
         uses: actions/upload-artifact@v4
         with:
@@ -75,5 +84,6 @@ jobs:
         uses: azure/functions-action@v4
         with:
           app-name: func-frema-dev
+          # host.json があるフォルダを渡す
           package: ./functions_artifact
           respect-funcignore: true
