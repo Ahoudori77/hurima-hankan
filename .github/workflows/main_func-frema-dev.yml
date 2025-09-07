@@ -1,4 +1,3 @@
-# .github/workflows/main_func-frema-dev.yml
 name: Build and deploy Node.js project to Azure Function App - func-frema-dev
 
 on:
@@ -7,25 +6,24 @@ on:
   workflow_dispatch:
 
 env:
-  # host.json がある Functions プロジェクトのルート
-  APP_DIR: apps/functions
   NODE_VERSION: '20'
-  # CI で husky を完全停止
+  # CI では husky を無効化
   HUSKY: '0'
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions: { contents: read }
+    permissions:
+      contents: read
 
     steps:
       - uses: actions/checkout@v4
 
-      # 念のため hooks を無効化（HUSKY=0 と併用）
+      # 念のため git hooks も無効化（HUSKY=0 と併用）
       - name: Disable git hooks on CI
         run: git config --global core.hooksPath /dev/null
 
-      # pnpm はワークスペースのビルド用に使用
+      # pnpm は packageManager のバージョンと合わせる（例: 9.7.0）
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
@@ -41,32 +39,25 @@ jobs:
             pnpm-lock.yaml
             **/pnpm-lock.yaml
 
-      # ワークスペース依存（dev含む）は pnpm で解決
       - name: Install deps (workspace)
         run: pnpm install --frozen-lockfile || pnpm install
 
-      # Functions の prod 依存は apps/functions 内に自己完結で作成（npm を使用）
-      - name: Install prod deps in functions (self-contained)
-        working-directory: ${{ env.APP_DIR }}
-        run: npm install --omit=dev
-
-      # Functions をビルド（dist 生成）
+      # Functions パッケージをビルド
       - name: Build functions
-        run: pnpm -r --filter "./${{ env.APP_DIR }}" build
+        run: pnpm -r --filter "./apps/functions" build
 
-      # 念のためファイル確認
-      - name: Sanity check
+      # ★ 自己完結の配布物を作成（host.json / dist / node_modules を同梱）
+      - name: Make deploy bundle (pnpm deploy)
         run: |
-          test -f "${{ env.APP_DIR }}/host.json"
-          test -f "${{ env.APP_DIR }}/dist/index.js"
-          test -d "${{ env.APP_DIR }}/node_modules"
+          rm -rf functions_bundle
+          pnpm --filter "./apps/functions" deploy --prod --out-dir functions_bundle
+          test -f functions_bundle/host.json
 
-      # フォルダをそのまま渡す
-      - name: Upload artifact (functions folder)
+      - name: Upload artifact (functions bundle)
         uses: actions/upload-artifact@v4
         with:
           name: functions
-          path: ${{ env.APP_DIR }}
+          path: functions_bundle
 
   deploy:
     runs-on: ubuntu-latest
@@ -89,6 +80,7 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_A92E72DFDD0A4A45AD361F41A0FCC47A }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_6DE080F944D046B7BFE6C04F57533B43 }}
 
+      # Azure Functions へのデプロイ（v1 を使用）
       - name: Deploy to Azure Functions
         uses: azure/functions-action@v1
         with:
