@@ -4,6 +4,11 @@
   "private": true,
   "type": "module",
   "main": "./dist/index.js",
+  "files": [
+    "dist",
+    "host.json",
+    "package.json"
+  ],
   "scripts": {
     "build": "tsc -b",
     "dev": "func start --javascript",
