@@ -1,11 +1,12 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
-import { ordersContainer } from "../integrations/cosmos.js";
+import { ensureCosmos, ordersContainer } from "../integrations/cosmos.js";
 
 export const orderGet = app.http("orders-get", {
   route: "orders/{id}",
   methods: ["GET"],
   authLevel: "anonymous",
   handler: async (req: HttpRequest, ctx: InvocationContext): Promise<HttpResponseInit> => {
+    await ensureCosmos(); 
     // ルートパラメータ（/orders/{id}）から取得
     const id = req.params?.id;
     if (!id) {

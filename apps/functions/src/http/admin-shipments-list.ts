@@ -1,11 +1,13 @@
 import { app, HttpRequest, HttpResponseInit } from "@azure/functions";
 import { shipmentsContainer } from "../integrations/cosmos.js";
+import { ensureCosmos, ordersContainer } from "../integrations/cosmos.js";
 
 export const opsShipmentsList = app.http("ops-shipments-list", {
   methods: ["GET"],
   route: "ops/shipments",
   authLevel: "anonymous",
   handler: async (req: HttpRequest): Promise<HttpResponseInit> => {
+    await ensureCosmos(); 
     const limit = Number(req.query.get("limit") ?? "20");
     const token = req.query.get("cont") ?? undefined;
 

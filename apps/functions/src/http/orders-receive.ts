@@ -1,6 +1,6 @@
 // apps/functions/src/http/orders-receive.ts
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
-import { ordersContainer } from "../integrations/cosmos.js";
+import { ensureCosmos, ordersContainer } from "../integrations/cosmos.js";
 
 type OrderRequest = {
   marketplace: "M" | "Y" | "R";
@@ -14,6 +14,7 @@ app.http("orders-receive", {
   authLevel: "admin",
   route: "orders/receive",
   handler: async (req: HttpRequest, ctx: InvocationContext): Promise<HttpResponseInit> => {
+    await ensureCosmos(); 
     const body = (await req.json()) as OrderRequest;
     const orderId = `ORD-${Date.now()}`;
 

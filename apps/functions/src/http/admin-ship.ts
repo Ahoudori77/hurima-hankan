@@ -1,5 +1,6 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
 import { shipmentsContainer, ShipmentDoc } from "../integrations/cosmos.js";
+import { ensureCosmos, ordersContainer } from "../integrations/cosmos.js";
 
 type ReqBody = {
   order_id: string;
@@ -9,6 +10,7 @@ type ReqBody = {
 };
 
 export async function adminShip(req: HttpRequest, ctx: InvocationContext): Promise<HttpResponseInit> {
+  await ensureCosmos();
   const body = (await req.json()) as Partial<ReqBody> ?? {};
   const { order_id, carrier, tracking_no, notify = true } = body;
 

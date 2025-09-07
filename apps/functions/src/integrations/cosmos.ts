@@ -28,6 +28,7 @@ let db: Database;
 let orders: Container;
 let proofs: Container;
 let shipments: Container;
+let initPromise: Promise<void> | null = null;
 
 export async function ensureCosmos() {
   const { database } = await client.databases.createIfNotExists({ id: dbName });
@@ -42,6 +43,29 @@ export async function ensureCosmos() {
   orders = o.container;
   proofs = p.container;
   shipments = s.container;
+
+  if (orders && proofs && shipments) return;
+
+  if (!initPromise) {
+    initPromise = (async () => {
+      const { database } = await client.databases.createIfNotExists({ id: dbName });
+      db = database;
+      const [o, p, s] = await Promise.all([
+        db.containers.createIfNotExists({ id: ordersContainerName,    partitionKey: { paths: ["/order_id"], version: 2 } }),
+        db.containers.createIfNotExists({ id: proofsContainerName,    partitionKey: { paths: ["/order_id"], version: 2 } }),
+        db.containers.createIfNotExists({ id: shipmentsContainerName, partitionKey: { paths: ["/order_id"], version: 2 } }),
+      ]);
+      orders = o.container;
+      proofs = p.container;
+      shipments = s.container;
+    })().catch((e) => {
+      // 失敗時は次回呼び出しでやり直せるように
+      initPromise = null;
+      throw e;
+    });
+  }
+
+  await initPromise;
 }
 
 export const ordersContainer    = () => { if (!orders) throw new Error("Cosmos not initialized"); return orders; };
