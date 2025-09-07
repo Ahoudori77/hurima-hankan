@@ -49,9 +49,7 @@ jobs:
         run: |
           rm -rf functions_bundle
           # apps/functions を対象に、出力先 functions_bundle に自己完結バンドルを作る
-          pushd apps/functions
-          pnpm deploy ../../functions_bundle --prod
-          popd
+          pnpm --filter @frema/functions deploy --prod functions_bundle
           # 最低限のファイルがあるか簡易チェック
           test -f functions_bundle/host.json
           test -d functions_bundle/node_modules
