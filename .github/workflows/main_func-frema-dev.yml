@@ -19,11 +19,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # 念のため git hooks も無効化（HUSKY=0 と併用）
       - name: Disable git hooks on CI
         run: git config --global core.hooksPath /dev/null
 
-      # pnpm は packageManager のバージョンと合わせる（例: 9.7.0）
+      # pnpm は packageManager のバージョンと合わせる
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
@@ -42,16 +41,20 @@ jobs:
       - name: Install deps (workspace)
         run: pnpm install --frozen-lockfile || pnpm install
 
-      # Functions パッケージをビルド
       - name: Build functions
         run: pnpm -r --filter "./apps/functions" build
 
-      # ★ 自己完結の配布物を作成（host.json / dist / node_modules を同梱）
+      # 自己完結の配布物を作成（host.json / dist / node_modules を同梱）
       - name: Make deploy bundle (pnpm deploy)
         run: |
           rm -rf functions_bundle
-          pnpm --filter "./apps/functions" deploy --prod --out-dir functions_bundle
+          # apps/functions を対象に、出力先 functions_bundle に自己完結バンドルを作る
+          pushd apps/functions
+          pnpm deploy ../../functions_bundle --prod
+          popd
+          # 最低限のファイルがあるか簡易チェック
           test -f functions_bundle/host.json
+          test -d functions_bundle/node_modules
 
       - name: Upload artifact (functions bundle)
         uses: actions/upload-artifact@v4
@@ -86,4 +89,5 @@ jobs:
         with:
           app-name: func-frema-dev
           package: ./functions_artifact
+          # フォルダをそのまま zip して送るため、.funcignore は実質不要ですが付けておいてOK
           respect-funcignore: true
