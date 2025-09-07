@@ -1,17 +1,28 @@
+# apps/functions/.funcignore
+**/*
+
+# 残すもの
+!host.json
+!package.json
+!dist/**
+
+# 依存も配布する（これが重要）
+!node_modules/**
+
 # ❌ ローカル専用の設定/秘密
 local.settings.json
 *.env
 .env.*
 secrets*.json
 
-# ❌ エディタ/CI/リポジトリメタ
+# ❌ エディタ/CI/メタ
 .git/
 .gitignore
 .github/
 .husky/
 .vscode/
 
-# ❌ テスト・ドキュメント・カバレッジなど
+# ❌ テスト・ドキュメントなど
 **/__tests__/
 **/*.test.ts
 **/*.spec.ts
@@ -21,7 +32,7 @@ infra/
 scripts/
 **/*.md
 
-# ❌ TypeScript ソース類（dist を配布する構成のため）
+# ❌ TypeScript ソース（dist 配布前提）
 src/
 tsconfig*.json
 

@@ -8,9 +8,9 @@ on:
 
 env:
   # host.json がある Functions プロジェクトのルート
-  AZURE_FUNCTIONAPP_PACKAGE_PATH: apps/functions
+  APP_DIR: apps/functions
   NODE_VERSION: '20'
-  # CI では husky を無効化
+  # CI で husky を完全停止
   HUSKY: '0'
 
 jobs:
@@ -21,18 +21,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # 念のため git hooks も無効化（HUSKY=0 と併用）
+      # 念のため hooks を無効化（HUSKY=0 と併用）
       - name: Disable git hooks on CI
         run: git config --global core.hooksPath /dev/null
 
-      # ★ 先に pnpm を入れる（A 案）
+      # pnpm はワークスペースのビルド用に使用
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9.7.0
+          version: 9
           run_install: false
 
-      # ★ その後 Node を入れて cache に pnpm を指定
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -42,22 +41,32 @@ jobs:
             pnpm-lock.yaml
             **/pnpm-lock.yaml
 
+      # ワークスペース依存（dev含む）は pnpm で解決
       - name: Install deps (workspace)
         run: pnpm install --frozen-lockfile || pnpm install
 
-      # Functions パッケージだけをビルド
+      # Functions の prod 依存は apps/functions 内に自己完結で作成（npm を使用）
+      - name: Install prod deps in functions (self-contained)
+        working-directory: ${{ env.APP_DIR }}
+        run: npm install --omit=dev
+
+      # Functions をビルド（dist 生成）
       - name: Build functions
-        run: pnpm -r --filter "./apps/functions" build
+        run: pnpm -r --filter "./${{ env.APP_DIR }}" build
 
-      - name: Sanity check host.json
-        run: test -f "${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/host.json"
+      # 念のためファイル確認
+      - name: Sanity check
+        run: |
+          test -f "${{ env.APP_DIR }}/host.json"
+          test -f "${{ env.APP_DIR }}/dist/index.js"
+          test -d "${{ env.APP_DIR }}/node_modules"
 
-      # zip は不要。フォルダをアーティファクトとして渡す
+      # フォルダをそのまま渡す
       - name: Upload artifact (functions folder)
         uses: actions/upload-artifact@v4
         with:
           name: functions
-          path: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+          path: ${{ env.APP_DIR }}
 
   deploy:
     runs-on: ubuntu-latest
@@ -81,9 +90,8 @@ jobs:
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_6DE080F944D046B7BFE6C04F57533B43 }}
 
       - name: Deploy to Azure Functions
-        uses: azure/functions-action@v1
+        uses: azure/functions-action@v4
         with:
           app-name: func-frema-dev
-          # host.json があるフォルダを渡す
           package: ./functions_artifact
           respect-funcignore: true
