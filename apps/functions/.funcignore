@@ -1,0 +1,29 @@
+# ❌ ローカル専用の設定/秘密
+local.settings.json
+*.env
+.env.*
+secrets*.json
+
+# ❌ エディタ/CI/リポジトリメタ
+.git/
+.gitignore
+.github/
+.husky/
+.vscode/
+
+# ❌ テスト・ドキュメント・カバレッジなど
+**/__tests__/
+**/*.test.ts
+**/*.spec.ts
+coverage/
+docs/
+infra/
+scripts/
+**/*.md
+
+# ❌ TypeScript ソース類（dist を配布する構成のため）
+src/
+tsconfig*.json
+
+# （必要なければ）ソースマップ
+**/*.map
