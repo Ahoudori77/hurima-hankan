@@ -8,6 +8,8 @@ import "./http/admin-orders.js";
 import "./http/admin-shipments-list.js";
 import "./http/order-get.js";
 
+import "./http/admin-ping.js";
+
 import { ensureCosmos } from "./integrations/cosmos.js";
 // Functions ホスト起動時に Cosmos を準備
 ensureCosmos().then(
